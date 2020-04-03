@@ -60,7 +60,7 @@ io.on("connection", socket => {
     })
     //tells client that the user was found
     socket.emit("successfulLogin", updatedUserObject)
-
+    console.log(`${updatedUserObject.username} just logged back in`);
     //broadcasts to other clients to say "hey this user is now logged in"
     socket.broadcast.emit("newLogin", updatedUserObject)
     //sends information to client, except the users array will not include the user themself
@@ -85,14 +85,17 @@ io.on("connection", socket => {
     console.log(updatedUserObject);
 
     //emit the logout of the user
-        //we could get away with just sending the socketId here, but for consistency we'send receive the userObj
+    //we could get away with just sending the socketId here, but for consistency we'send receive the userObj
     socket.broadcast.emit("userLogout", updatedUserObject)
     console.log(`${updatedUserObject.username} has disconnected, current users:`, users);
   });
 
-  socket.on("sentMessage", (messageObj) => {
+  socket.on("sentMessage", (message) => {
+    console.log("We just got a message!", message)
+    let user = users.find(user => user.socketId === socket.id)
+    let messageObj = {userId: user.id, message}
     messages.push(messageObj)
-    socket.broadcast.emit("newMessage", )
+    io.emit("newMessage", messageObj)
   })
 
 
