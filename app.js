@@ -19,11 +19,11 @@ let messages = []
 
 let idSetter = 0
 
+//keeping track of userIds this way until we get a database
 let setId = () => idSetter += 1
 
 io.on("connection", socket => {
   console.log("New client connected with a socket ID of: ", socket.id)
-
   socket.on("signup", username => {
     //in the previous commit, I stored the socket ID. I decided against this and implemented an ID instead because the socket ID can change even if the same user logs in.
     //it's also easy to refrence the socket id from the socket itself
@@ -42,7 +42,6 @@ io.on("connection", socket => {
     //push this to the array after the broadcast so the user doesn't end up in the array
     users.push(newUserObj)
     console.log(`Signup was successful! Welcome ${newUserObj.username}`);
-
   })
 
   socket.on("login", loginId => {
@@ -70,24 +69,20 @@ io.on("connection", socket => {
 
   socket.on("disconnect", () => {
 
+    //emit the logout of the user by sending the id of the disconnected socket
+
     //perform the inverse of login here, setting socketId to null:
-    let updatedUserObject
     console.log(typeof(socket.id));
     users = users.map(user => {
       if(user.socketId === socket.id){
-        updatedUserObject = {...user, socketId: null}
-        return updatedUserObject
+        socket.broadcast.emit("userLogout", user)
+        console.log(`${user.username} has disconnected, current users:`, users);
+        return {...user, socketId: null}
       } else {
         return user
       }
     })
 
-    console.log(updatedUserObject);
-
-    //emit the logout of the user
-    //we could get away with just sending the socketId here, but for consistency we'send receive the userObj
-    socket.broadcast.emit("userLogout", updatedUserObject)
-    console.log(`${updatedUserObject.username} has disconnected, current users:`, users);
   });
 
   socket.on("sentMessage", (message) => {
@@ -98,7 +93,23 @@ io.on("connection", socket => {
     io.emit("newMessage", messageObj)
   })
 
+  //all WebRTC peer connection communication:
 
+  socket.on("offer", (watcherSocketId, description) => {
+    console.log(description);
+    console.log(`Offer Received! We're connecting with your peer ${users.find(user => user.socketId === watcherSocketId)} now`);
+    socket.to(watcherSocketId).emit("offer", socket.id, description)
+  })
+
+  socket.on("answer", (broadcasterSocketId, description) => {
+    console.log("Answer Received! We're telling the broadcaster you're good to go!")
+    socket.to(broadcasterSocketId).emit("answer", socket.id, description)
+  })
+
+  socket.on("candidate", (id, message) => {
+    console.log("YEEHAW LOOKING FOR A CANDIDATE");
+    socket.to(id).emit("candidate", socket.id, message);
+  });
 });
 
 server.listen(port, () => console.log(`Listening on port ${port}`));
