@@ -24,60 +24,36 @@ let setId = () => idSetter += 1
 
 io.on("connection", socket => {
   console.log("New client connected with a socket ID of: ", socket.id)
-  socket.on("signup", username => {
+  socket.on("initializeSession", username => {
     //in the previous commit, I stored the socket ID. I decided against this and implemented an ID instead because the socket ID can change even if the same user logs in.
     //it's also easy to refrence the socket id from the socket itself
-    let newUserObj = {id: setId(), socketId: socket.id, username}
+
+    let userObj = users.find(user => user.username === username)
+    if (userObj){
+      userObj.socketId = socket.id
+    } else {
+      userObj = {socketId: socket.id, username}
+      users.push(userObj)
+    }
 
     //tell the client that it was succesfully registered
-    socket.emit("successfulSignup", newUserObj)
+    socket.emit("initializedSession", userObj, users.filter(user => user.username !== userObj.username), messages)
+
     //tell other clients a new user is here
-    socket.broadcast.emit("newUser", newUserObj)
-
-    //we'll emit this before we push the new user to the list of users so they are not included
-    //this lets the client know who else is here and all the messages so far
-    socket.emit("allUsers", users)
-    socket.emit("allMessages", messages)
-
-    //push this to the array after the broadcast so the user doesn't end up in the array
-    users.push(newUserObj)
-    console.log(`Signup was successful! Welcome ${newUserObj.username}`);
+    socket.broadcast.emit("newUserJoin", userObj)
   })
 
-  socket.on("login", loginId => {
-
-    //set the user's socketId attribute which we'll use on a disconnect, esp if there's a hard refresh or page close
-    //i don't want to adjust the new object directly, but rather make a copy
-    let updatedUserObject
-    users = users.map(user => {
-      if(user.id === loginId){
-        updatedUserObject = {...user, socketId: socket.id}
-        return updatedUserObject
-      } else {
-        return user
-      }
-    })
-    //tells client that the user was found
-    socket.emit("successfulLogin", updatedUserObject)
-    console.log(`${updatedUserObject.username} just logged back in`);
-    //broadcasts to other clients to say "hey this user is now logged in"
-    socket.broadcast.emit("newLogin", updatedUserObject)
-    //sends information to client, except the users array will not include the user themself
-    socket.emit("allUsers", users.filter(user => user.id !== loginId))
-    socket.emit("allMessages", messages)
-  })
 
   socket.on("disconnect", () => {
 
     //emit the logout of the user by sending the id of the disconnected socket
 
     //perform the inverse of login here, setting socketId to null:
-    console.log(typeof(socket.id));
     users = users.map(user => {
       if(user.socketId === socket.id){
         socket.broadcast.emit("userLogout", user)
-        console.log(`${user.username} has disconnected, current users:`, users);
         return {...user, socketId: null}
+        console.log(`${user.username} has disconnected, current users:`, users);
       } else {
         return user
       }
@@ -88,7 +64,7 @@ io.on("connection", socket => {
   socket.on("sentMessage", (message) => {
     console.log("We just got a message!", message)
     let user = users.find(user => user.socketId === socket.id)
-    let messageObj = {userId: user.id, message}
+    let messageObj = {username: user.username, message}
     messages.push(messageObj)
     io.emit("newMessage", messageObj)
   })
@@ -96,7 +72,6 @@ io.on("connection", socket => {
   //all WebRTC peer connection communication:
 
   socket.on("offer", (watcherSocketId, description) => {
-    console.log(description);
     console.log(`Offer Received! We're connecting with your peer ${users.find(user => user.socketId === watcherSocketId)} now`);
     socket.to(watcherSocketId).emit("offer", socket.id, description)
   })
