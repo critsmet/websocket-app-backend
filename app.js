@@ -2,28 +2,41 @@ const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 
-const port = process.env.PORT || 4001;
-const index = require("./routes/index");
-
 const app = express();
-app.use(index);
 
 const server = http.createServer(app);
 
 const io = socketIo(server);
+
+const port = process.env.PORT || 4001;
+
+const router = express.Router();
 
 //we'll store the users here as their clients make connections
 let users = []
 
 let messages = []
 
-let idSetter = 0
+let broadcasts = 0
 
-//keeping track of userIds this way until we get a database
-let setId = () => idSetter += 1
+router.get("/", (req, res) => {
+  res.send({ response: "I am alive" }).status(200);
+});
+
+router.get("/delete-messages", (req, res) => {
+  messages = []
+  console.log("Messages deleted!", messages);
+  res.send({response: "messages deleted"}).status(202)
+})
+
+app.use(router);
 
 io.on("connection", socket => {
-  console.log("New client connected with a socket ID of: ", socket.id)
+  console.log("A new connection has been made!", socket.id);
+
+  //send the current users to the new connection so that we can see if a user with that username has already been made
+  socket.emit("loggedInUsers",  users)
+
   socket.on("initializeSession", username => {
     //in the previous commit, I stored the socket ID. I decided against this and implemented an ID instead because the socket ID can change even if the same user logs in.
     //it's also easy to refrence the socket id from the socket itself
@@ -37,10 +50,11 @@ io.on("connection", socket => {
     }
 
     //tell the client that it was succesfully registered
-    socket.emit("initializedSession", userObj, users.filter(user => user.username !== userObj.username), messages)
+    socket.emit("initializedSession", userObj, messages)
 
     //tell other clients a new user is here
     socket.broadcast.emit("newUserJoin", userObj)
+    console.log(`Success! ${userObj.username} has joined!`);
   })
 
 
@@ -49,16 +63,16 @@ io.on("connection", socket => {
     //emit the logout of the user by sending the id of the disconnected socket
 
     //perform the inverse of login here, setting socketId to null:
-    users = users.map(user => {
+    users = users.filter(user => {
       if(user.socketId === socket.id){
         socket.broadcast.emit("userLogout", user)
-        return {...user, socketId: null}
-        console.log(`${user.username} has disconnected, current users:`, users);
+        console.log(`${user.username} has disconnected`);
+        return false
       } else {
-        return user
+        return true
       }
     })
-
+    console.log("Users still connected:", users);
   });
 
   socket.on("sentMessage", (message) => {
@@ -71,8 +85,20 @@ io.on("connection", socket => {
 
   //all WebRTC peer connection communication:
 
+  socket.on("requestBroadcast", () => {
+    console.log("Requesting broadcast");
+    if (broadcasts === 4){
+      console.log("not approved");
+      socket.emit("broadcastRequestResponse", {approved: false})
+    } else {
+      broadcasts += 1
+      console.log("approved");
+      socket.emit("broadcastRequestResponse", {approved: true})
+    }
+  })
+
   socket.on("offer", (watcherSocketId, description) => {
-    console.log(`Offer Received! We're connecting with your peer ${users.find(user => user.socketId === watcherSocketId)} now`);
+    console.log(`Offer Received! We're connecting with your peer ${users.find(user => user.socketId === watcherSocketId).username} now`);
     socket.to(watcherSocketId).emit("offer", socket.id, description)
   })
 
@@ -84,7 +110,12 @@ io.on("connection", socket => {
   socket.on("candidate", (id, message) => {
     console.log("YEEHAW LOOKING FOR A CANDIDATE");
     socket.to(id).emit("candidate", socket.id, message);
-  });
-});
+  })
+
+  socket.on("endBroadcast", () => {
+    broadcasts -= 1
+    socket.broadcast.emit("broadcastEnded", socket.id)
+  })
+})
 
 server.listen(port, () => console.log(`Listening on port ${port}`));
