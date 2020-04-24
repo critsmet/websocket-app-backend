@@ -17,7 +17,8 @@ let users = []
 
 let messages = []
 
-let broadcasts = 0
+//keep a list of the socketIds broadcasting
+let broadcasts = []
 
 router.get("/", (req, res) => {
   res.send({ response: "I am alive" }).status(200);
@@ -79,6 +80,7 @@ io.on("connection", socket => {
         return true
       }
     })
+    broadcasts = broadcasts.filter(broadcast => broadcast !== socket.id)
     console.log("Users still connected:", users);
   });
 
@@ -98,7 +100,7 @@ io.on("connection", socket => {
       console.log("not approved");
       socket.emit("broadcastRequestResponse", {approved: false})
     } else {
-      broadcasts += 1
+      broadcasts.push(socket.id)
       console.log("approved");
       socket.emit("broadcastRequestResponse", {approved: true})
     }
@@ -120,7 +122,7 @@ io.on("connection", socket => {
   })
 
   socket.on("endBroadcast", () => {
-    broadcasts -= 1
+    broadcasts = broadcasts.filter(broadcast => broadcast !== socket.id)
     socket.broadcast.emit("broadcastEnded", socket.id)
   })
 })
