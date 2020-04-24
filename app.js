@@ -116,9 +116,8 @@ io.on("connection", socket => {
     socket.to(broadcasterSocketId).emit("answer", socket.id, description)
   })
 
-  socket.on("candidate", (id, message) => {
-    console.log("YEEHAW LOOKING FOR A CANDIDATE");
-    socket.to(id).emit("candidate", socket.id, message);
+  socket.on("candidate", (id, sender, candidate) => {
+    socket.to(id).emit("candidate", socket.id, sender, candidate);
   })
 
   socket.on("endBroadcast", () => {
