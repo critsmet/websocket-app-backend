@@ -29,6 +29,13 @@ router.get("/delete-messages", (req, res) => {
   res.send({response: "messages deleted"}).status(202)
 })
 
+router.get("/reset-broadcasts", (req, res) => {
+  broadcasts = 0
+  console.log("Broadcasts reset!", messages);
+  res.send({response: "broadcasts reset"}).status(202)
+})
+
+
 app.use(router);
 
 io.on("connection", socket => {
