@@ -13,6 +13,12 @@ twilioTokens.tokens.create().then(obj => {
 
   const app = express();
 
+  app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "https://chatapp-front-end.herokuapp.com"); // update to match the domain you will make the request from
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+  });
+
   const server = http.createServer(app);
 
   const io = socketIo(server);
@@ -34,20 +40,20 @@ twilioTokens.tokens.create().then(obj => {
 
   router.get("/clear-messages", (req, res) => {
     messages = []
-    console.log("Messages deleted!", messages);
-    res.send({response: "messages deleted"}).status(202)
+    console.log("Messages cleared!", messages);
+    res.send({response: "messages cleared"}).status(202)
   })
 
   router.get("/clear-users", (req, res) => {
     users = []
-    console.log("Messages deleted!", messages);
-    res.send({response: "messages deleted"}).status(202)
+    console.log("Users cleared!", messages);
+    res.send({response: "users cleared"}).status(202)
   })
 
   router.get("/clear-broadcasts", (req, res) => {
     broadcasts = 0
-    console.log("Broadcasts reset!", messages);
-    res.send({response: "broadcasts reset"}).status(202)
+    console.log("Broadcasts cleared!", messages);
+    res.send({response: "broadcasts cleared"}).status(202)
   })
 
 
@@ -122,6 +128,7 @@ twilioTokens.tokens.create().then(obj => {
     })
 
     socket.on("offer", (watcherSocketId, description) => {
+      console.log(watcherSocketId, users);
       console.log(`Offer Received! We're connecting with your peer ${users.find(user => user.socketId === watcherSocketId).username} now`);
       socket.to(watcherSocketId).emit("offer", socket.id, description)
     })
