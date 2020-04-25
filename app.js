@@ -10,7 +10,6 @@ const twilioTokens = require('twilio')(accountSid, authToken);
 twilioTokens.tokens.create().then(obj => {
 
   let iceServersArray = obj.iceServers
-  console.log("GOT EM!", obj);
 
   const app = express();
 
@@ -33,13 +32,19 @@ twilioTokens.tokens.create().then(obj => {
     res.send({ response: "I am alive" }).status(200);
   });
 
-  router.get("/delete-messages", (req, res) => {
+  router.get("/clear-messages", (req, res) => {
     messages = []
     console.log("Messages deleted!", messages);
     res.send({response: "messages deleted"}).status(202)
   })
 
-  router.get("/reset-broadcasts", (req, res) => {
+  router.get("/clear-users", (req, res) => {
+    users = []
+    console.log("Messages deleted!", messages);
+    res.send({response: "messages deleted"}).status(202)
+  })
+
+  router.get("/clear-broadcasts", (req, res) => {
     broadcasts = 0
     console.log("Broadcasts reset!", messages);
     res.send({response: "broadcasts reset"}).status(202)
