@@ -62,24 +62,20 @@ twilioTokens.tokens.create().then(obj => {
   io.on("connection", socket => {
     console.log("A new connection has been made!", socket.id);
 
+    socket.on("callUser", call => {
+      io.to(call.socketId).emit('incomingCall', {signal: call.data, from: call.from})
+    })
+
     socket.emit("iceServers", iceServersArray)
     //send the current users to the new connection so that we can see if a user with that username has already been made
     socket.emit("loggedInUsers",  users)
 
     socket.on("initializeSession", username => {
-      //in the previous commit, I stored the socket ID. I decided against this and implemented an ID instead because the socket ID can change even if the same user logs in.
-      //it's also easy to refrence the socket id from the socket itself
-
-      let userObj = users.find(user => user.username === username)
-      if (userObj){
-        userObj.socketId = socket.id
-      } else {
-        userObj = {socketId: socket.id, username}
-        users.push(userObj)
-      }
-
       //tell the client that it was succesfully registered
-      socket.emit("initializedSession", userObj, messages)
+      let userObj = {socketId: socket.id, username: username}
+      socket.emit("initializedSession", userObj, users, messages)
+      users.push(userObj)
+      console.log(userObj, users, messages);
 
       //tell other clients a new user is here
       socket.broadcast.emit("newUserJoin", userObj)
