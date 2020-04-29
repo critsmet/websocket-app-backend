@@ -100,7 +100,7 @@ twilioTokens.tokens.create().then(obj => {
 
     socket.on("requestBroadcast", () => {
       console.log("Requesting broadcast");
-      if (broadcasts === 4){
+      if (broadcasts.length === 4 || broadcasts.find(broadcastSocketId => broadcastSocketId === socket.id)){
         console.log("not approved");
         socket.emit("broadcastRequestResponse", {approved: false})
       } else {
@@ -122,6 +122,7 @@ twilioTokens.tokens.create().then(obj => {
     })
 
     socket.on("candidate", (id, sender, candidate) => {
+      console.log("SENDING CANDIDATES FROM", sender);
       socket.to(id).emit("candidate", socket.id, sender, candidate);
     })
 
