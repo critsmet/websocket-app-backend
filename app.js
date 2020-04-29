@@ -62,6 +62,8 @@ twilioTokens.tokens.create().then(obj => {
   io.on("connection", socket => {
     console.log("A new connection has been made!", socket.id);
 
+    socket.emit("connected", iceServersArray, users)
+    
     socket.on("callUser", call => {
       io.to(call.socketId).emit('incomingCall', {signal: call.data, from: call.from})
     })
@@ -73,9 +75,9 @@ twilioTokens.tokens.create().then(obj => {
     socket.on("initializeSession", username => {
       //tell the client that it was succesfully registered
       let userObj = {socketId: socket.id, username: username}
-      socket.emit("initializedSession", userObj, users, messages)
+      socket.emit("initializedSession", userObj, messages)
       users.push(userObj)
-      console.log(userObj, users, messages);
+      console.log("userObj", userObj, "user", users, "messages", messages);
 
       //tell other clients a new user is here
       socket.broadcast.emit("newUserJoin", userObj)
