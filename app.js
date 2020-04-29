@@ -34,26 +34,11 @@ twilioTokens.tokens.create().then(obj => {
 
   //keep a list of the socketIds broadcasting
   let broadcasts = []
-  router.get("/", (req, res) => {
-    res.send({ response: "I am alive" }).status(200);
-  });
 
   router.get("/clear-messages", (req, res) => {
     messages = []
     console.log("Messages cleared!", messages);
     res.send({response: "messages cleared"}).status(202)
-  })
-
-  router.get("/clear-users", (req, res) => {
-    users = []
-    console.log("Users cleared!", messages);
-    res.send({response: "users cleared"}).status(202)
-  })
-
-  router.get("/clear-broadcasts", (req, res) => {
-    broadcasts = 0
-    console.log("Broadcasts cleared!", messages);
-    res.send({response: "broadcasts cleared"}).status(202)
   })
 
 
@@ -63,7 +48,7 @@ twilioTokens.tokens.create().then(obj => {
     console.log("A new connection has been made!", socket.id);
 
     socket.emit("connected", iceServersArray, users)
-    
+
     socket.on("callUser", call => {
       io.to(call.socketId).emit('incomingCall', {signal: call.data, from: call.from})
     })
